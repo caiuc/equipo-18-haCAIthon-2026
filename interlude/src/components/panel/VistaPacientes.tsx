@@ -2,16 +2,25 @@
 
 import { useMemo, useState } from "react";
 import { fmtFecha } from "@/lib/formato";
+import { etiquetaSexo, nombreCorto } from "@/lib/identidad";
 import { nombreCesfam, type Caso } from "@/lib/panel";
 import type { Cesfam } from "@/lib/types";
-import { C, CABECERA, RIESGO_FG, TARJETA } from "./estilos";
+import { C, CABECERA, RIESGO_FG, ROTULO, TARJETA } from "./estilos";
 import { Patologias } from "./piezas";
 import { MONO } from "./estilos";
 
 const COLUMNAS =
-  "60px 76px minmax(110px,150px) minmax(90px,120px) 84px minmax(96px,120px) 110px minmax(120px,1fr)";
+  "minmax(140px,180px) 72px minmax(110px,150px) minmax(90px,120px) 84px minmax(96px,120px) 120px minmax(110px,1fr)";
 
 const FILTROS = ["todos", "alto", "moderado", "bajo"] as const;
+
+/** Minúsculas y sin tildes, para que "veronica" encuentre a "Verónica". */
+function normalizar(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
 
 export function VistaPacientes({
   casos,
@@ -27,10 +36,15 @@ export function VistaPacientes({
   const [q, setQ] = useState("");
 
   const filtrados = useMemo(() => {
-    const busqueda = q.trim().toLowerCase();
+    const busqueda = normalizar(q.trim());
     return casos
       .filter((c) => filtroRiesgo === "todos" || c.paciente.riesgo === filtroRiesgo)
-      .filter((c) => !busqueda || c.paciente.id.toLowerCase().includes(busqueda))
+      .filter(
+        (c) =>
+          !busqueda ||
+          normalizar(c.paciente.id).includes(busqueda) ||
+          normalizar(nombreCorto(c.paciente)).includes(busqueda),
+      )
       .sort((a, b) => a.paciente.id.localeCompare(b.paciente.id));
   }, [casos, filtroRiesgo, q]);
 
@@ -47,7 +61,7 @@ export function VistaPacientes({
       >
         <input
           type="text"
-          placeholder="Buscar por ID…"
+          placeholder="Buscar por nombre o ID…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           style={{
@@ -89,7 +103,7 @@ export function VistaPacientes({
 
       <div style={TARJETA}>
         <div style={{ ...CABECERA, display: "grid", gridTemplateColumns: COLUMNAS, gap: 10 }}>
-          <div>ID</div>
+          <div>Paciente</div>
           <div>Edad · Sexo</div>
           <div>CESFAM</div>
           <div>Patologías</div>
@@ -121,9 +135,23 @@ export function VistaPacientes({
                 alignItems: "center",
               }}
             >
-              <div style={{ fontFamily: MONO, fontSize: "12.5px", fontWeight: 500 }}>{p.id}</div>
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: C.texto,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {nombreCorto(p)}
+                </div>
+                <div style={{ fontFamily: MONO, fontSize: 11, color: C.masTenue }}>{p.id}</div>
+              </div>
               <div style={{ fontSize: "12.5px", color: C.medio }}>
-                {p.edad} · {p.sexo}
+                {p.edad} · {etiquetaSexo(p.sexo)}
               </div>
               <div style={{ fontSize: 12, color: C.tenue }}>{nombreCesfam(cesfams, p.cesfam_id)}</div>
               <Patologias lista={p.patologias} />
@@ -145,10 +173,19 @@ export function VistaPacientes({
               >
                 {p.fase === "en_compensacion" ? "en compensación" : "compensado"}
               </div>
-              <div style={{ fontSize: "11.5px", color: C.tenue, lineHeight: 1.45 }}>
-                últ. {fmtFecha(p.ultimo_control)}
-                <br />
-                próx. {fmtFecha(p.proximo_control)}
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <div>
+                  <div style={{ ...ROTULO, fontSize: "9px", marginBottom: 1 }}>Último</div>
+                  <div style={{ fontSize: "11.5px", fontWeight: 600, color: C.fuerte }}>
+                    {fmtFecha(p.ultimo_control)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ ...ROTULO, fontSize: "9px", marginBottom: 1 }}>Próximo</div>
+                  <div style={{ fontSize: "11.5px", color: C.tenue }}>
+                    {fmtFecha(p.proximo_control)}
+                  </div>
+                </div>
               </div>
               <div style={{ fontSize: 12, color: C.medio }}>{seguimiento}</div>
             </div>

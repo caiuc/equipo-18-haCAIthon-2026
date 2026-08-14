@@ -2,14 +2,23 @@
 
 import { useState, useTransition } from "react";
 import { registrarGestion } from "@/app/acciones";
-import { fmtFecha, diasDesde } from "@/lib/formato";
+import { fmtFecha } from "@/lib/formato";
+import { etiquetaSexo, nombreCorto, nombrePaciente, sexoLargo } from "@/lib/identidad";
 import { derivarTags } from "@/lib/priorizacion";
 import type { Caso } from "@/lib/panel";
 import type { RespuestasCami, TipoAccion } from "@/lib/types";
 import { C, CABECERA, estiloEstado, MONO, ROTULO, SEV, TARJETA, TIPO } from "./estilos";
-import { Etiquetas, Patologias, Rotulo, SugerenciaAsistente } from "./piezas";
+import {
+  BloqueControles,
+  Etiquetas,
+  FilaKPIs,
+  Patologias,
+  Rotulo,
+  SugerenciaAsistente,
+  type KPI,
+} from "./piezas";
 
-const COLUMNAS = "104px 170px minmax(220px,1fr) minmax(120px,150px) 22px";
+const COLUMNAS = "104px 200px minmax(200px,1fr) minmax(160px,180px) 22px";
 
 export type FilaCola = {
   caso: Caso;
@@ -32,6 +41,7 @@ export function VistaCola({
 }) {
   return (
     <>
+      <FilaKPIs items={kpisDeCola(filas)} />
       <Leyenda />
       <div style={TARJETA}>
         <div style={{ ...CABECERA, display: "grid", gridTemplateColumns: COLUMNAS, gap: 12 }}>
@@ -55,6 +65,50 @@ export function VistaCola({
       </div>
     </>
   );
+}
+
+/**
+ * Indicadores del turno. Todos se cuentan sobre los casos PENDIENTES (los
+ * gestionados salen de la cola), salvo el último, que es justamente lo ya
+ * trabajado. No hay lógica nueva acá: son conteos de lo que la tabla muestra.
+ */
+function kpisDeCola(filas: FilaCola[]): KPI[] {
+  const pendientes = filas.filter((f) => !f.caso.gestion);
+  const criticas = pendientes.filter((f) => f.caso.severidad === "critica");
+  const atencion = pendientes.filter((f) => f.caso.severidad === "atencion");
+  const sinLlamada = pendientes.filter((f) => f.caso.llamadas.length === 0);
+  const gestionados = filas.filter((f) => f.caso.gestion);
+  const dentroDelCupo = pendientes.filter((f) => !f.fueraCupo);
+
+  return [
+    {
+      label: "En cola",
+      valor: pendientes.length,
+      detalle: `${dentroDelCupo.length} dentro del cupo de hoy`,
+    },
+    {
+      label: "Críticas",
+      valor: criticas.length,
+      detalle: "hallazgos de alarma en la última llamada",
+      dot: SEV.critica.dot,
+    },
+    {
+      label: "Atención",
+      valor: atencion.length,
+      detalle: "requieren revisión, sin señal de alarma",
+      dot: SEV.atencion.dot,
+    },
+    {
+      label: "Sin llamada",
+      valor: sinLlamada.length,
+      detalle: "ningún seguimiento registrado aún",
+    },
+    {
+      label: "Gestionados",
+      valor: gestionados.length,
+      detalle: "ya trabajados por el equipo",
+    },
+  ];
 }
 
 function Leyenda() {
@@ -106,7 +160,6 @@ function Fila({
   const { caso, fueraCupo } = fila;
   const { paciente: p, ultima, gestion } = caso;
   const sev = SEV[caso.severidad];
-  const ultDias = diasDesde(p.ultimo_control, hoy);
 
   return (
     <div style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
@@ -154,11 +207,12 @@ function Fila({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ fontFamily: MONO, fontSize: "12.5px", fontWeight: 500 }}>
-            {p.id}{" "}
-            <span style={{ fontFamily: "inherit", fontWeight: 400, color: "#5c6a61" }}>
-              {p.edad} a · {p.sexo}
-            </span>
+          <div style={{ fontSize: "13.5px", fontWeight: 600, color: C.texto, lineHeight: 1.3 }}>
+            {nombreCorto(p)}
+          </div>
+          <div style={{ fontSize: 12, color: "#5c6a61" }}>
+            <span style={{ fontFamily: MONO }}>{p.id}</span> · {p.edad} a ·{" "}
+            {etiquetaSexo(p.sexo)}
           </div>
           <div style={{ fontSize: 12, color: "#5c6a61" }}>
             riesgo {p.riesgo}
@@ -181,13 +235,11 @@ function Fila({
           )}
         </div>
 
-        <div style={{ fontSize: 12, color: C.medio, lineHeight: 1.5 }}>
-          Últ. control <strong style={{ fontWeight: 600 }}>hace {ultDias} d</strong>
-          <br />
-          <span style={{ color: C.masTenue }}>
-            Próx.: {p.proximo_control ? fmtFecha(p.proximo_control) : "sin agendar"}
-          </span>
-        </div>
+        <BloqueControles
+          ultimoControl={p.ultimo_control}
+          proximoControl={p.proximo_control}
+          hoy={hoy}
+        />
 
         <div
           style={{ fontSize: 12, color: "#98a49b", justifySelf: "end", paddingTop: 2 }}
@@ -197,7 +249,7 @@ function Fila({
         </div>
       </div>
 
-      {expandido && <Detalle caso={caso} ultima={ultima} />}
+      {expandido && <Detalle caso={caso} ultima={ultima} hoy={hoy} />}
     </div>
   );
 }
@@ -277,7 +329,7 @@ function gruposCrudos(r: RespuestasCami | null) {
   }).filter((g) => g.kv.length > 0);
 }
 
-function Detalle({ caso, ultima }: { caso: Caso; ultima: Caso["ultima"] }) {
+function Detalle({ caso, ultima, hoy }: { caso: Caso; ultima: Caso["ultima"]; hoy: Date }) {
   const p = caso.paciente;
   const r = ultima?.respuestas ?? null;
   const grupos = gruposCrudos(r);
@@ -375,6 +427,17 @@ function Detalle({ caso, ultima }: { caso: Caso; ultima: Caso["ultima"] }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, minWidth: 0 }}>
         <div>
+          <Rotulo>Paciente</Rotulo>
+          <div style={{ fontSize: 15, fontWeight: 600, color: C.texto, letterSpacing: "-0.01em" }}>
+            {nombrePaciente(p)}
+          </div>
+          <div style={{ fontSize: "12.5px", color: C.tenue, marginTop: 2 }}>
+            <span style={{ fontFamily: MONO }}>{p.id}</span> · {p.edad} años ·{" "}
+            {sexoLargo(p.sexo)} · riesgo {p.riesgo}
+          </div>
+        </div>
+
+        <div>
           <div style={{ ...ROTULO, marginBottom: 8 }}>Historial de llamadas</div>
           {caso.llamadas.length === 0 ? (
             <div style={{ fontSize: 13, color: C.apagado, fontStyle: "italic" }}>
@@ -418,21 +481,12 @@ function Detalle({ caso, ultima }: { caso: Caso; ultima: Caso["ultima"] }) {
           )}
         </div>
 
-        <div style={{ display: "flex", gap: 24, fontSize: "12.5px", color: C.medio, lineHeight: 1.55 }}>
-          <div>
-            <span style={{ color: C.apagado }}>Último control</span>
-            <br />
-            <strong style={{ fontWeight: 600 }}>{fmtFecha(p.ultimo_control)}</strong> ·{" "}
-            {p.fase === "en_compensacion" ? "en compensación" : "compensado"}
-          </div>
-          <div>
-            <span style={{ color: C.apagado }}>Próximo control</span>
-            <br />
-            <strong style={{ fontWeight: 600 }}>
-              {p.proximo_control ? fmtFecha(p.proximo_control) : "sin agendar"}
-            </strong>
-          </div>
-        </div>
+        <BloqueControles
+          ultimoControl={p.ultimo_control}
+          proximoControl={p.proximo_control}
+          hoy={hoy}
+          fase={p.fase}
+        />
 
         {p.contacto_emergencia && (
           <div style={{ fontSize: "12.5px", color: C.medio }}>

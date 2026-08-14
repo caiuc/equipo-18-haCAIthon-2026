@@ -1,6 +1,7 @@
 "use client";
 
 import { fmtFecha, fmtFechaHora } from "@/lib/formato";
+import { etiquetaSexo, nombreCorto } from "@/lib/identidad";
 import { nombreCesfam, type Caso } from "@/lib/panel";
 import type { Cesfam, Llamada } from "@/lib/types";
 import { C, etiquetaTipo, MONO, TARJETA } from "./estilos";
@@ -105,16 +106,21 @@ export function VistaCalidad({
               key={p.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "60px 90px minmax(120px,170px) minmax(150px,1fr)",
+                gridTemplateColumns: "minmax(130px,170px) 90px minmax(120px,170px) minmax(150px,1fr)",
                 gap: 12,
                 padding: "11px 20px",
                 borderTop: `1px solid ${C.bordeSuave}`,
                 alignItems: "baseline",
               }}
             >
-              <div style={{ fontFamily: MONO, fontSize: "12.5px" }}>{p.id}</div>
+              <div style={{ fontSize: "12.5px", fontWeight: 600, color: C.texto }}>
+                {nombreCorto(p)}{" "}
+                <span style={{ fontFamily: MONO, fontWeight: 400, fontSize: 11, color: C.masTenue }}>
+                  {p.id}
+                </span>
+              </div>
               <div style={{ fontSize: "12.5px", color: C.medio }}>
-                {p.edad} a · {p.sexo}
+                {p.edad} a · {etiquetaSexo(p.sexo)}
               </div>
               <div style={{ fontSize: 12, color: C.tenue }}>
                 {nombreCesfam(cesfams, p.cesfam_id)}

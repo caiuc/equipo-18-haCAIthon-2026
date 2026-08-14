@@ -131,7 +131,7 @@ export function Panel({ datos, hoyISO }: { datos: DatosPanel; hoyISO: string }) 
               letterSpacing: "-0.01em",
             }}
           >
-            Interlude
+            PreventAI
           </div>
           <div style={{ fontSize: "11.5px", color: LATERAL.sutil, marginTop: 2 }}>
             Panel PSCV · seguimiento telefónico

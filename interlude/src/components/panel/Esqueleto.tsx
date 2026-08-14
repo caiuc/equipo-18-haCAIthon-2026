@@ -19,7 +19,7 @@ export function Esqueleto() {
       >
         <div style={{ padding: "0 20px 16px", borderBottom: "1px solid #31413515" }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.01em" }}>
-            Interlude
+            PreventAI
           </div>
           <div style={{ fontSize: "11.5px", color: LATERAL.sutil, marginTop: 2 }}>
             Panel PSCV · seguimiento telefónico

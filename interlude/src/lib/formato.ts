@@ -79,10 +79,18 @@ export function fmtFechaHora(valor: string | null | undefined): string {
   return `${Number(p.day)} ${mes} ${p.hour}:${p.minute}`;
 }
 
+/**
+ * Días entre `iso` y `hoy`, con signo: positivo si la fecha ya pasó, negativo
+ * si está por venir. Null si no hay fecha o no se puede parsear.
+ */
+export function diasRelativos(iso: string | null | undefined, hoy: Date): number | null {
+  if (!iso) return null;
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return null;
+  return Math.round((hoy.getTime() - fecha.getTime()) / 86_400_000);
+}
+
 /** Días transcurridos entre `iso` y `hoy`. Nunca negativo. */
 export function diasDesde(iso: string | null | undefined, hoy: Date): number {
-  if (!iso) return 0;
-  const fecha = new Date(iso);
-  if (Number.isNaN(fecha.getTime())) return 0;
-  return Math.max(0, Math.round((hoy.getTime() - fecha.getTime()) / 86_400_000));
+  return Math.max(0, diasRelativos(iso, hoy) ?? 0);
 }
