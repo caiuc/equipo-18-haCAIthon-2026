@@ -1,26 +1,80 @@
 @import "tailwindcss";
 
+/*
+ * El panel viene de un diseño denso con valores muy específicos, así que su
+ * layout se aplica con estilos inline (ver components/panel/estilos.ts).
+ * Acá solo queda lo que no se puede expresar inline: base del documento,
+ * estados :hover y la animación del esqueleto de carga.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --fondo: #eff3ee;
+  --texto: #1b241e;
+  --verde: #2e6a4d;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--font-plex-sans), system-ui, sans-serif;
+}
+
+a {
+  color: var(--verde);
+}
+a:hover {
+  color: #224e39;
+}
+
+input,
+textarea,
+button,
+select {
+  font-family: inherit;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+button:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 1px;
+}
+
+/* Filas clicables de las tablas. */
+.pscv-fila:hover {
+  background: #f7faf6;
+}
+
+/* Items de navegación en la barra lateral (los inactivos). */
+.pscv-nav:hover {
+  background: #28382c;
+}
+
+.pscv-btn-primario:hover {
+  background: #24523d;
+}
+
+.pscv-btn-secundario:hover {
+  background: #f0f4ef;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@keyframes skpulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.pscv-esqueleto {
+  animation: skpulse 1.4s ease-in-out infinite;
 }
